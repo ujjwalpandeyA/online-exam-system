@@ -15,7 +15,7 @@ public class AiQuestionGenerateRequestDto {
 
     @NotNull(message = "Number of questions is required")
     @Min(value = 1, message = "Must generate at least 1 question")
-    @Max(value = 10, message = "Cannot generate more than 10 questions in a single request")
+    @Max(value = 50, message = "Cannot generate more than 50 questions in a single request")
     private Integer numberOfQuestions;
 
     @NotNull(message = "Default marks per question is required")

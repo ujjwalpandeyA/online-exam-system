@@ -1,13 +1,6 @@
 package com.exam.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 
 @Entity
 @Table(name = "student_answers")
@@ -17,61 +10,41 @@ public class StudentAnswer {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "is_correct")
-    private boolean isCorrect;
-
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "student_result_id", nullable = false)
     private StudentResult studentResult;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "question_id", nullable = false)
     private Question question;
 
-    @ManyToOne
-    @JoinColumn(name = "selected_option_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "selected_option_id")
     private Option selectedOption;
 
-    public StudentAnswer() {
-    }
+    @Column(name = "is_correct")
+    private boolean isCorrect;
 
-    public Long getId() {
-        return id;
-    }
+    @Column(name = "marks_awarded")
+    private Integer marksAwarded;
 
-    public void setId(Long id) {
-        this.id = id;
-    }
+    public StudentAnswer() {}
 
-    public boolean isCorrect() {
-        return isCorrect;
-    }
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
 
-    public void setCorrect(boolean correct) {
-        isCorrect = correct;
-    }
+    public StudentResult getStudentResult() { return studentResult; }
+    public void setStudentResult(StudentResult studentResult) { this.studentResult = studentResult; }
 
-    public StudentResult getStudentResult() {
-        return studentResult;
-    }
+    public Question getQuestion() { return question; }
+    public void setQuestion(Question question) { this.question = question; }
 
-    public void setStudentResult(StudentResult studentResult) {
-        this.studentResult = studentResult;
-    }
+    public Option getSelectedOption() { return selectedOption; }
+    public void setSelectedOption(Option selectedOption) { this.selectedOption = selectedOption; }
 
-    public Question getQuestion() {
-        return question;
-    }
+    public boolean isCorrect() { return isCorrect; }
+    public void setCorrect(boolean correct) { isCorrect = correct; }
 
-    public void setQuestion(Question question) {
-        this.question = question;
-    }
-
-    public Option getSelectedOption() {
-        return selectedOption;
-    }
-
-    public void setSelectedOption(Option selectedOption) {
-        this.selectedOption = selectedOption;
-    }
+    public Integer getMarksAwarded() { return marksAwarded; }
+    public void setMarksAwarded(Integer marksAwarded) { this.marksAwarded = marksAwarded; }
 }

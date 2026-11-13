@@ -1,7 +1,9 @@
 package com.exam.service;
 
 import com.exam.dto.ExamResultResponseDto;
+import com.exam.dto.ExamReviewResponseDto;
 import com.exam.dto.ExamSubmissionDto;
+import com.exam.dto.LeaderboardEntryDto;
 
 import java.util.List;
 
@@ -16,4 +18,8 @@ public interface ExamSubmissionService {
     List<ExamResultResponseDto> getMyResults(String username);
 
     List<ExamResultResponseDto> getExamResultsForTeacher(Long examId, String teacherUsername);
+    
+    List<LeaderboardEntryDto> getExamLeaderboard(Long examId);
+    
+    ExamReviewResponseDto getExamReview(Long resultId, String username);
 }

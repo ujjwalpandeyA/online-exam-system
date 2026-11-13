@@ -1,7 +1,9 @@
 package com.exam.controller;
 
 import com.exam.dto.ExamResultResponseDto;
+import com.exam.dto.ExamReviewResponseDto;
 import com.exam.dto.ExamSubmissionDto;
+import com.exam.dto.LeaderboardEntryDto;
 import com.exam.service.ExamSubmissionService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -39,6 +41,12 @@ public class ExamSubmissionController {
         List<ExamResultResponseDto> results = submissionService.getMyResults(principal.getName());
         return ResponseEntity.ok(results);
     }
+    
+    @GetMapping("/exam/{examId}/leaderboard")
+    @PreAuthorize("hasAnyRole('STUDENT', 'TEACHER')")
+    public ResponseEntity<List<LeaderboardEntryDto>> getExamLeaderboard(@PathVariable Long examId) {
+        return ResponseEntity.ok(submissionService.getExamLeaderboard(examId));
+    }
 
     // Teacher views all submissions for an exam they created
     @GetMapping("/exam/{examId}/results")
@@ -48,6 +56,13 @@ public class ExamSubmissionController {
             Principal principal) {
         List<ExamResultResponseDto> results = submissionService.getExamResultsForTeacher(examId, principal.getName());
         return ResponseEntity.ok(results);
+    }
+    @GetMapping("/{resultId}/review")
+    @PreAuthorize("hasAnyRole('STUDENT', 'TEACHER')")
+    public ResponseEntity<ExamReviewResponseDto> getExamReview(
+            @PathVariable Long resultId,
+            Principal principal) {
+        return ResponseEntity.ok(submissionService.getExamReview(resultId, principal.getName()));
     }
 
     // View specific result by ID (STUDENT or TEACHER)

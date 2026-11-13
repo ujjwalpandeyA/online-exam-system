@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teacher Management Console - Online Exam System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f4f6f9; }
+        .navbar-teacher { background-color: #1e293b; }
+        .card-custom {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.06);
+            background: #ffffff;
+        }
+        .metric-badge {
+            background-color: #e2e8f0;
+            color: #334155;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 6px;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Navigation Header -->
+<nav class="navbar navbar-dark navbar-teacher px-4 py-3 shadow-sm">
+    <span class="navbar-brand mb-0 h1 fw-bold text-light">Teacher Portal & Control Panel</span>
+    <div class="d-flex align-items-center gap-3">
+        <span class="text-white-50" id="teacherUsername">Welcome, Instructor</span>
+        <button class="btn btn-outline-light btn-sm" onclick="handleLogout()">Sign Out</button>
+    </div>
+</nav>
+
+<div class="container py-4" style="max-width: 1050px;">
+    <!-- Alert Banner -->
+    <div id="alertBox" class="alert d-none" role="alert"></div>
+
+    <!-- Exam Creation Form Card -->
+    <div class="card card-custom p-4 mb-4">
+        <h4 class="fw-bold mb-1 text-dark">Create New Assessment</h4>
+        <p class="text-muted small mb-4">Configure the grading scheme, questions count, and passing threshold.</p>
+
+        <form id="createExamForm">
+            <div class="row g-3 mb-3">
+                <div class="col-md-8">
+                    <label class="form-label fw-semibold">Assessment Title</label>
+                    <input type="text" class="form-control" id="title" placeholder="e.g. Java Core & Collections Evaluation" required>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Difficulty Level</label>
+                    <select class="form-select" id="difficultyLevel">
+                        <option value="EASY">Beginner / Easy</option>
+                        <option value="MEDIUM" selected>Intermediate / Medium</option>
+                        <option value="HARD">Advanced / Hard</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Description</label>
+                <textarea class="form-control" id="description" rows="2" placeholder="Brief outline of concepts covered..." required></textarea>
+            </div>
+
+            <div class="row g-3 mb-4">
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold">Total Questions</label>
+                    <input type="number" class="form-control" id="numQuestions" value="35" min="1" required oninput="calculateTotalMarks()">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold">Marks Per Question</label>
+                    <input type="number" class="form-control" id="marksPerQuestion" value="2" min="1" required oninput="calculateTotalMarks()">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold">Full Marks</label>
+                    <input type="number" class="form-control bg-light" id="totalMarks" value="70" readonly>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold">Passing Marks</label>
+                    <input type="number" class="form-control" id="passMarks" value="24" min="1" required>
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center pt-2 border-top">
+                <span class="small text-muted">Exams are created in draft mode. Click <strong>Publish</strong> to open them to students.</span>
+                <button type="submit" id="createExamBtn" class="btn btn-primary fw-semibold px-4 py-2">Create Assessment</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Live Exams Management Card -->
+    <div class="card card-custom p-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="fw-bold mb-0 text-dark">Active Assessments</h4>
+            <button class="btn btn-outline-secondary btn-sm" onclick="loadTeacherExams()">Refresh</button>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 60px;">ID</th>
+                        <th>Title</th>
+                        <th class="text-center">Full Marks</th>
+                        <th class="text-center">Pass Marks</th>
+                        <th class="text-center">Status</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="examsTableBody">
+                    <tr>
+                        <td colspan="6" class="text-center py-4 text-muted">Loading assessments...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    const token = localStorage.getItem('accessToken');
+    const username = localStorage.getItem('username');
+
+    if (!token) {
+        window.location.href = '/login';
+    }
+
+    if (username) {
+        document.getElementById('teacherUsername').innerText = `Instructor: ${username}`;
+    }
+
+    // Auto calculate Total Marks = Question Count * Marks Per Question
+    function calculateTotalMarks() {
+        const count = parseInt(document.getElementById('numQuestions').value) || 0;
+        const perQ = parseInt(document.getElementById('marksPerQuestion').value) || 0;
+        document.getElementById('totalMarks').value = count * perQ;
+    }
+
+    // 1. Create Exam
+	document.getElementById('createExamForm').addEventListener('submit', async function (e) {
+	        e.preventDefault();
+
+	        const btn = document.getElementById('createExamBtn');
+	        const alertBox = document.getElementById('alertBox');
+
+	        // Loading state while Gemini creates the paper
+	        btn.disabled = true;
+	        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Gemini is generating questions...';
+	        alertBox.classList.add('d-none');
+
+	        const title = document.getElementById('title').value.trim();
+	        const difficulty = document.getElementById('difficultyLevel').value;
+	        const numQuestions = parseInt(document.getElementById('numQuestions').value);
+	        const marksPerQ = parseInt(document.getElementById('marksPerQuestion').value);
+	        const totalMarks = parseInt(document.getElementById('totalMarks').value);
+	        const passMarks = parseInt(document.getElementById('passMarks').value);
+	        const description = document.getElementById('description').value.trim();
+
+	        try {
+	            // Step 1: Create the Exam shell
+	            const createRes = await fetch('/api/v1/exams', {
+	                method: 'POST',
+	                headers: {
+	                    'Content-Type': 'application/json',
+	                    'Authorization': `Bearer ${token}`
+	                },
+	                body: JSON.stringify({
+	                    title: title,
+	                    description: description,
+	                    totalMarks: totalMarks,
+	                    passMarks: passMarks,
+	                    durationMinutes: 60
+	                })
+	            });
+
+	            const examData = await createRes.json();
+	            if (!createRes.ok) throw new Error(examData.message || 'Failed to create assessment shell.');
+
+	            const examId = examData.id;
+
+				// Step 2: Trigger Gemini via Spring AI to generate & persist questions
+				            const aiRes = await fetch(`/api/v1/questions/exam/${examId}/ai-generate`, {
+				                method: 'POST',
+				                headers: {
+				                    'Content-Type': 'application/json',
+				                    'Authorization': `Bearer ${token}`
+				                },
+				                body: JSON.stringify({
+				                    topic: title,
+				                    difficulty: difficulty,
+				                    numberOfQuestions: numQuestions,
+				                    defaultMarks: marksPerQ
+				                })
+				            });
+
+	            if (!aiRes.ok) {
+	                const aiErr = await aiRes.json();
+	                throw new Error(aiErr.message || 'Exam shell created, but Gemini failed to generate questions.');
+	            }
+
+	            // Step 3: Publish the fully populated exam
+	            const publishRes = await fetch(`/api/v1/exams/${examId}/publish`, {
+	                method: 'PUT',
+	                headers: { 'Authorization': `Bearer ${token}` }
+	            });
+
+	            if (!publishRes.ok) {
+	                const pubErr = await publishRes.json();
+	                throw new Error(pubErr.message || 'Questions generated, but failed to publish exam.');
+	            }
+
+	            alertBox.className = 'alert alert-success';
+	            alertBox.innerText = `Success! Gemini generated ${numQuestions} questions for "${title}" (ID: ${examId}) and published the test.`;
+	            alertBox.classList.remove('d-none');
+
+	            document.getElementById('createExamForm').reset();
+	            calculateTotalMarks();
+	            loadTeacherExams();
+
+	        } catch (err) {
+	            alertBox.className = 'alert alert-danger';
+	            alertBox.innerText = err.message;
+	            alertBox.classList.remove('d-none');
+	        } finally {
+	            btn.disabled = false;
+	            btn.innerText = 'Create Assessment';
+	        }
+	    });
+
+    // 2. Fetch and Render Published Exams
+    async function loadTeacherExams() {
+        const tbody = document.getElementById('examsTableBody');
+
+        try {
+            const res = await fetch('/api/v1/exams/published', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (!res.ok) throw new Error('Failed to retrieve exams.');
+            const list = await res.json();
+
+            if (!list || list.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">No assessments registered yet.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = '';
+            list.forEach(exam => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="fw-bold">${exam.id}</td>
+                    <td class="fw-semibold">${exam.title}</td>
+                    <td class="text-center">${exam.totalMarks}</td>
+                    <td class="text-center">${exam.passMarks}</td>
+                    <td class="text-center">
+                        <span class="badge ${exam.published ? 'bg-success' : 'bg-secondary'}">
+                            ${exam.published ? 'PUBLISHED' : 'DRAFT'}
+                        </span>
+                    </td>
+                    <td class="text-end">
+                        <div class="d-inline-flex gap-2">
+                            ${!exam.published ? `<button class="btn btn-sm btn-success fw-semibold" onclick="publishExam(${exam.id})">Publish</button>` : ''}
+                            <a href="/leaderboard/${exam.id}" class="btn btn-sm btn-outline-primary fw-semibold">Leaderboard</a>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        } catch (err) {
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center text-danger py-4">${err.message}</td></tr>`;
+        }
+    }
+
+    // 3. Publish Exam
+    async function publishExam(examId) {
+        if (!confirm(`Publish exam ID ${examId} to make it available to all students?`)) return;
+
+        try {
+            const res = await fetch(`/api/v1/exams/${examId}/publish`, {
+                method: 'PUT',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (res.ok) {
+                alert(`Exam ${examId} is now live and published!`);
+                loadTeacherExams();
+            } else {
+                const data = await res.json();
+                alert(data.message || 'Failed to publish exam.');
+            }
+        } catch (err) {
+            alert(err.message);
+        }
+    }
+
+    function handleLogout() {
+        localStorage.clear();
+        window.location.href = '/login';
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        calculateTotalMarks();
+        loadTeacherExams();
+    });
+</script>
+
+</body>
+</html>

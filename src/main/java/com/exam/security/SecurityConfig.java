@@ -40,22 +40,26 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                // Public auth and registration routes
-                .requestMatchers("/api/v1/auth/**", "/api/v1/users/register").permitAll()
-                
-                // Public Swagger UI and OpenAPI documentation endpoints
-                .requestMatchers(
-                    "/v3/api-docs/**",
-                    "/v3/api-docs",
-                    "/swagger-ui/**",
-                    "/swagger-ui.html"
-                ).permitAll()
-                
-                // All other business endpoints require authentication
-                .anyRequest().authenticated()
-            );
-
-        http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+            		.requestMatchers(
+            			    "/",
+            			    "/login",
+            			    "/register",
+            			    "/dashboard",
+            			    "/teacher-dashboard/**",
+            			    "/exam/**",
+            			    "/result/**",
+            			    "/leaderboard/**",
+            			    "/error",
+            			    "/css/**",
+            			    "/js/**",
+            			    "/api/v1/auth/**",
+            			    "/api/v1/users/register",
+            			    "/swagger-ui/**",
+            			    "/v3/api-docs/**"
+            			).permitAll()
+            	    .anyRequest().authenticated()
+            	)
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
